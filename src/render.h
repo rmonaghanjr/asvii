@@ -11,8 +11,9 @@ typedef struct {
     uint8_t draw_fps_counter;
 
     // video settings
+    char* video_name;
     uint8_t fps;
-    uint8_t frame_count;
+    uint32_t frame_count;
     uint16_t v_width;
     uint16_t v_height;
     uint16_t w_width;
@@ -25,5 +26,6 @@ typedef struct {
 } ropts_t;
 
 ropts_t* init_render_options(char* video_name);
+void init_render_env(ropts_t* ropts);
 
 #endif
