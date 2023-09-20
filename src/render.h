@@ -22,6 +22,8 @@ typedef struct {
     uint8_t rows_per_thread;
     uint8_t greyscale_sz;
     char* greyscale;
-} RENDER_OPTIONS;
+} ropts_t;
+
+ropts_t* init_render_options(char* video_name);
 
 #endif

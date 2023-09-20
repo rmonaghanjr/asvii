@@ -1,6 +1,6 @@
 # project config
 BUILD_DIR := build
-EXECUTABLE := cmd-play
+EXECUTABLE := asvii
 FRAMES_FOLDER := ./frames/
 CORES := $(shell sysctl -n hw.logicalcpu)
 
@@ -9,8 +9,8 @@ COMPILER := clang
 FLAGS := -c -g -Wall -Werror -pedantic-errors
 
 # source files
-RENDER_FILES := 
-VIDEO_FILES := 
+RENDER_FILES := render.c
+VIDEO_FILES := video.c bitmap.c
 FILES := main.c $(RENDER_FILES) $(VIDEO_FILES)
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(FILES)))
 

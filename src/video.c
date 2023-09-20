@@ -24,7 +24,7 @@ int fast_atoi(const char* str) {
     return val;
 }
 
-char* exec(char* cmd) {
+char* exec_command(char* cmd) {
     char buffer[BUFFER_SIZE];
 
     char* data;
@@ -48,7 +48,7 @@ int get_frame_count(char* video_name) {
     strcpy(result, cmd);
     strcat(result, video_name);
 
-    frame_count = fast_atoi(exec_ffmpg_query(result));
+    frame_count = fast_atoi(exec_command(result));
     free(result);
 
     return frame_count; // becuase idk 
@@ -63,7 +63,7 @@ int get_duration(char* video_name) {
     strcat(result, video_name);
     strcat(result, cmd_p2);
     
-    duration = fast_atoi(exec_ffmpg_query(result));
+    duration = fast_atoi(exec_command(result));
     free(result);
 
     return duration;
@@ -75,7 +75,7 @@ void get_frames(int frame_count, char* video_name) {
     if (frames_dir) {
         closedir(frames_dir);
     } else if (ENOENT == errno) {
-        exec("mkdir frames");
+        exec_command("mkdir frames");
 
         char duration[(int)((ceil(log10(frame_count))+1)*sizeof(char))];
         sprintf(duration, "%f", (double) frame_count / get_duration(video_name));
@@ -91,7 +91,7 @@ void get_frames(int frame_count, char* video_name) {
         strcat(result, duration);
         strcat(result, cmd_p3);
 
-        exec_ffmpg_query(result);
+        exec_command(result);
         
         free(result);
 

@@ -79,9 +79,8 @@ int pixel_at(FRAME *frame, unsigned int* r, unsigned int* g, unsigned int* b, in
         (*g) = (unsigned int)(frame->pixel_data[frame->row_size * y + 3 * x + 1]);
         (*b) = (unsigned int)(frame->pixel_data[frame->row_size * y + 3 * x + 0]);
         return 1;
-    } else {
-        return 0;
     }
+    return 0;
 }
 
 int sample_region(FRAME* frame, int w, int h, int s_x, int s_y) {
