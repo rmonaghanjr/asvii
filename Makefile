@@ -35,7 +35,7 @@ $(BUILD_DIR)/$(EXECUTABLE): $(OBJECTS)
 
 run:
 	make
-	./$(BUILD_DIR)/$(EXECUTABLE) ./input/input.mp4
+	./$(BUILD_DIR)/$(EXECUTABLE) ./input/bad_apple.mp4
 
 new:
 	make clean

@@ -5,7 +5,7 @@
 
 #include "bitmap.h"
 
-int read_frame(FRAME* result, char* filename) {
+int read_frame(vframe_t* result, char* filename) {
     FILE* fp;
     fp = fopen(filename, "r");
 
@@ -65,13 +65,11 @@ int read_frame(FRAME* result, char* filename) {
         fseek(fp, result->pixel_array_offset, SEEK_CUR + sizeof(uint32_t));
         result->pixel_data[i] = (uint32_t) fgetc(fp);
     }
-
     fclose(fp);
-
     return 1;
 }
 
-int pixel_at(FRAME *frame, unsigned int* r, unsigned int* g, unsigned int* b, int x, int y) {
+int pixel_at(vframe_t* frame, unsigned int* r, unsigned int* g, unsigned int* b, int x, int y) {
     if (x < frame->width && y < frame->height) {
         y = frame->height - 1 - y;
         
@@ -83,7 +81,7 @@ int pixel_at(FRAME *frame, unsigned int* r, unsigned int* g, unsigned int* b, in
     return 0;
 }
 
-int sample_region(FRAME* frame, int w, int h, int s_x, int s_y) {
+int sample_region(vframe_t* frame, int w, int h, int s_x, int s_y) {
     int avg_luminance = 0;
     int s_samples = 0;
 

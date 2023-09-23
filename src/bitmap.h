@@ -20,10 +20,10 @@ typedef struct {
 
     unsigned char *pixel_data;
     const char *filename;
-} FRAME;
+} vframe_t;
 
-int read_frame(FRAME* result, char* filename);
-int pixel_at(FRAME* frame, unsigned int* r, unsigned int* g, unsigned int* b, int x, int y);
-int sample_region(FRAME* frame, int w, int h, int s_x, int s_y);
+int read_frame(vframe_t* result, char* filename);
+int pixel_at(vframe_t* frame, unsigned int* r, unsigned int* g, unsigned int* b, int x, int y);
+int sample_region(vframe_t* frame, int w, int h, int s_x, int s_y);
 
 #endif

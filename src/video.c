@@ -83,7 +83,7 @@ void get_dimensions(char* video_name, uint16_t* width, uint16_t* height) {
     free(result);
 }
 
-void get_frames(int frame_count, char* video_name) {
+void get_frames(size_t frame_count, char* video_name) {
 
     DIR* frames_dir = opendir("frames");
     if (frames_dir) {

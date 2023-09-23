@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "bitmap.h"
+
 typedef struct {
     // renderer logic settings
     uint8_t use_threading;
@@ -25,7 +27,16 @@ typedef struct {
     char* greyscale;
 } ropts_t;
 
+struct vframe_chunk_args {
+    ropts_t* ropts;
+    vframe_t* vframe_buffer;
+    uint32_t* assigned_frames;
+    size_t assigned_frames_sz;
+};
+
 ropts_t* init_render_options(char* video_name);
 void init_render_env(ropts_t* ropts);
+vframe_t* create_vframe_buffer(ropts_t* ropts);
+void* vframe_chunk_builder(void* args);
 
 #endif
