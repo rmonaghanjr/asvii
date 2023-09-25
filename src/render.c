@@ -14,15 +14,15 @@
 // 1024 / fps = # of seconds to buffer
 #define BUFFER_SIZE 1024
 
-static int frame_buffer_index = 0;
-static int loaded_frames = 0;
-static vframe_t* frame_buffer[BUFFER_SIZE];
-static pthread_mutex_t buf_frame_locks[BUFFER_SIZE];
-static sem_t* fb_lock; 
+int frame_buffer_index = 0;
+int loaded_frames = 0;
+vframe_t frame_buffer[BUFFER_SIZE];
+pthread_mutex_t buf_frame_locks[BUFFER_SIZE];
+pthread_mutex_t fb_lock; 
 
-static sem_t* thread_join_lock;
-static int8_t join_idx = 0;
-static int8_t thread_join_back_queue[CORE_COUNT] = {-1, -1, -1, -1, -1, -1, -1, -1};
+sem_t* thread_join_lock;
+int8_t join_idx = 0;
+int8_t thread_join_back_queue[CORE_COUNT] = {-1, -1, -1, -1, -1, -1, -1, -1};
 
 ropts_t* init_render_options(char* video_name) {
     uint32_t frame_count = get_frame_count(video_name);
@@ -81,18 +81,13 @@ void init_render_env(ropts_t* ropts) {
     get_frames(ropts->frame_count, ropts->video_name);
 
     // clear buffer, init semaphore
-    if ((fb_lock = sem_open("fb_lock", O_CREAT, 0644, 1)) == SEM_FAILED) {
-        perror("sem_open");
-        exit(EXIT_FAILURE);
-    }
-
     if ((thread_join_lock = sem_open("thread_join_lock", O_CREAT, 0644, 1)) == SEM_FAILED) {
         perror("sem_open");
         exit(EXIT_FAILURE);
     }
+    pthread_mutex_init(&fb_lock, NULL);
 
     for (size_t i = 0; i < BUFFER_SIZE; i++) {
-        frame_buffer[i] = 0;
         pthread_mutex_init(&buf_frame_locks[i], NULL);
     }
     loaded_frames = 0;
@@ -100,21 +95,10 @@ void init_render_env(ropts_t* ropts) {
 }
 
 void cleanup_render_env(ropts_t* ropts) {
-    if (sem_close(fb_lock) == -1) {
-        perror("sem_close");
-        exit(EXIT_FAILURE);
-    }
-
-    if (sem_unlink("fb_lock") == -1) {
-        perror("sem_unlink");
-        exit(EXIT_FAILURE);
-    }
 }
 
-vframe_t* create_vframe_buffer(ropts_t* ropts) {
-    vframe_t* buf = (vframe_t*) malloc(sizeof(vframe_t) * ropts->frame_count);
-    pthread_t threads[CORE_COUNT];
-    struct vframe_chunk_args vframe_chunk_args[CORE_COUNT];
+struct vframe_chunk_args* init_vframe_loader(ropts_t* ropts) {
+    struct vframe_chunk_args* args = (struct vframe_chunk_args*) malloc(sizeof(struct vframe_chunk_args) * CORE_COUNT);
     for (size_t i = 0; i < CORE_COUNT; i++) {
         uint32_t* assigned_frames = (uint32_t*) malloc(sizeof(uint32_t) * (ropts->frame_count) / CORE_COUNT);
         size_t assigned_frame_count = 0;
@@ -123,24 +107,29 @@ vframe_t* create_vframe_buffer(ropts_t* ropts) {
             assigned_frames[assigned_frame_count++] = j;
         }
 
-        vframe_chunk_args[i].thread_id = i;
-        vframe_chunk_args[i].assigned_frames = assigned_frames;
-        vframe_chunk_args[i].assigned_frames_sz = assigned_frame_count;
-        vframe_chunk_args[i].vframe_buffer = buf;
-        vframe_chunk_args[i].ropts = ropts;
-        vframe_chunk_args[i].last_rendered_frame = 0;
+        args[i].thread_id = i;
+        args[i].assigned_frames = assigned_frames;
+        args[i].assigned_frames_sz = assigned_frame_count;
+        args[i].ropts = ropts;
+        args[i].last_rendered_frame = 0;
 
         //print options
         printf("pthread_t(%02ld): \n", i);
-        printf("  assigned_frames: %p\n", (void*) vframe_chunk_args[i].assigned_frames);
-        printf("  assigned_frames_sz: %ld\n", vframe_chunk_args[i].assigned_frames_sz);
-        printf("  vframe_buffer: %p\n", (void*) vframe_chunk_args[i].vframe_buffer);
-        printf("  ropts: %p\n", (void*) vframe_chunk_args[i].ropts);
-        printf("  last_rendered_frame: %ld\n", vframe_chunk_args[i].last_rendered_frame);
-
-        pthread_create(&threads[i], NULL, &vframe_chunk_loader, (void*) &vframe_chunk_args[i]);
+        printf("  assigned_frames: %p\n", (void*) args[i].assigned_frames);
+        printf("  assigned_frames_sz: %ld\n", args[i].assigned_frames_sz);
+        printf("  ropts: %p\n", (void*) args[i].ropts);
+        printf("  last_rendered_frame: %ld\n", args[i].last_rendered_frame);
     }
 
+    return args;
+}
+
+void start_vframe_loader(struct vframe_chunk_args* args) {
+    pthread_t threads[CORE_COUNT];
+    for (size_t i = 0; i < CORE_COUNT; i++) {
+        pthread_create(&threads[i], NULL, &vframe_chunk_loader, (void*) &args[i]);
+    }
+    
     // wait for all threads to finish
     int8_t joined_threads = 0;
     int8_t thread_idx = 0;
@@ -153,10 +142,7 @@ vframe_t* create_vframe_buffer(ropts_t* ropts) {
             thread_join_back_queue[thread_idx++] = -1;
         } 
     }
-
-    printf("all threads joined, total frames in buffer: %d\n", loaded_frames);
-
-    return buf;
+    join_idx = 0;
 }
 
 void* vframe_chunk_loader(void* args) {
@@ -174,9 +160,6 @@ void* vframe_chunk_loader(void* args) {
 
         char frame_name[256] = {0};
         sprintf(frame_name, "./frames/frame_%06d.bmp", curr_frame);
-        read_frame(&vframe_chunk_args->vframe_buffer[curr_frame], frame_name);
-        printf("loaded frame %d\n", curr_frame);
-
         if (pthread_mutex_trylock(&buf_frame_locks[curr_frame % BUFFER_SIZE]) != 0) {
             printf("frame %d already loaded, stopping vframe loader\n", curr_frame);
             vframe_chunk_args->last_rendered_frame = i-1;
@@ -185,11 +168,12 @@ void* vframe_chunk_loader(void* args) {
             sem_post(thread_join_lock);
             return NULL;
         }
+        read_frame(&frame_buffer[curr_frame % BUFFER_SIZE], frame_name);
+        frame_buffer[curr_frame % BUFFER_SIZE].filename = frame_name;
 
-        frame_buffer[curr_frame % BUFFER_SIZE] = &vframe_chunk_args->vframe_buffer[curr_frame];
-        sem_wait(fb_lock);
+        pthread_mutex_lock(&fb_lock);
         loaded_frames++;
-        sem_post(fb_lock);
+        pthread_mutex_unlock(&fb_lock);
     }
     free(vframe_chunk_args->assigned_frames);
     vframe_chunk_args->assigned_frames_sz = 0;

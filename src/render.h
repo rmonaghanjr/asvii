@@ -30,7 +30,6 @@ typedef struct {
 struct vframe_chunk_args {
     int8_t thread_id;
     ropts_t* ropts;
-    vframe_t* vframe_buffer;
     uint32_t* assigned_frames;
     size_t assigned_frames_sz;
     size_t last_rendered_frame;
@@ -39,7 +38,8 @@ struct vframe_chunk_args {
 ropts_t* init_render_options(char* video_name);
 void init_render_env(ropts_t* ropts);
 void cleanup_render_env(ropts_t* ropts);
-vframe_t* create_vframe_buffer(ropts_t* ropts);
+struct vframe_chunk_args* init_vframe_loader(ropts_t* ropts);
+void start_vframe_loader(struct vframe_chunk_args* args);
 void* vframe_chunk_loader(void* args);
 
 #endif
