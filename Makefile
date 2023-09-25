@@ -34,12 +34,13 @@ $(BUILD_DIR)/$(EXECUTABLE): $(OBJECTS)
 	$(COMPILER) $^ -o ./$(BUILD_DIR)/$(EXECUTABLE)
 
 run:
-	make
+	make clean
+	make -j$(shell lsproc)
 	./$(BUILD_DIR)/$(EXECUTABLE) ./input/bad_apple.mp4
 
 new:
 	make clean
-	make
+	make -j$(shell lsproc)
 
 clean:
 	rm -rf build

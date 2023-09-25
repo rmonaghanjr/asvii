@@ -24,5 +24,6 @@ int main(int argc, char *argv[]) {
 
     }
     free(vframe_buffer);
+    cleanup_render_env(render_options);
     return 0;
 }
