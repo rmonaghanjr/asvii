@@ -35,11 +35,21 @@ struct vframe_chunk_args {
     size_t last_rendered_frame;
 };
 
+struct vframe_renderer_args {
+    int8_t thread_id;
+    ropts_t* ropts;
+
+};
+
 ropts_t* init_render_options(char* video_name);
 void init_render_env(ropts_t* ropts);
 void cleanup_render_env(ropts_t* ropts);
 struct vframe_chunk_args* init_vframe_loader(ropts_t* ropts);
 void start_vframe_loader(struct vframe_chunk_args* args);
 void* vframe_chunk_loader(void* args);
+
+struct vframe_renderer_args* init_vframe_renderer(ropts_t* ropts);
+void start_vframe_renderer(struct vframe_renderer_args* args, uint8_t count);
+void* vframe_renderer(void* args);
 
 #endif

@@ -10,7 +10,7 @@
 #include "render.h"
 #include "video.h"
 
-#define CORE_COUNT 8
+#define CORE_COUNT 6
 // 1024 / fps = # of seconds to buffer
 #define BUFFER_SIZE 1024
 
@@ -22,7 +22,14 @@ pthread_mutex_t fb_lock;
 
 sem_t* thread_join_lock;
 int8_t join_idx = 0;
-int8_t thread_join_back_queue[CORE_COUNT] = {-1, -1, -1, -1, -1, -1, -1, -1};
+int8_t thread_join_back_queue[CORE_COUNT] = {-1};
+
+int8_t did_start_renderer = 0;
+int8_t extra_renderer_idx = 0;
+int8_t extra_renderer_back_queue[CORE_COUNT] = {-1};
+pthread_t* main_renderer_threads = NULL;
+
+char** rendered_frames = NULL;
 
 ropts_t* init_render_options(char* video_name) {
     uint32_t frame_count = get_frame_count(video_name);
@@ -181,6 +188,53 @@ void* vframe_chunk_loader(void* args) {
     sem_wait(thread_join_lock);
     thread_join_back_queue[join_idx++] = vframe_chunk_args->thread_id;
     sem_post(thread_join_lock);
+    return NULL;
+}
+
+struct vframe_renderer_args* init_vframe_renderer(ropts_t* ropts) {
+    struct vframe_renderer_args* args = (struct vframe_renderer_args*) malloc(sizeof(struct vframe_renderer_args) * CORE_COUNT);
+    for (size_t i = 0; i < CORE_COUNT; i++) {
+        args[i].thread_id = i;
+        args[i].ropts = ropts;
+
+        //print options
+        printf("pthread_t(%02ld): \n", i);
+        printf("  ropts: %p\n", (void*) args[i].ropts);
+    }
+
+    printf("initializing rendered_frames...");
+    rendered_frames = (char**) malloc(sizeof(char*) * ropts->frame_count);
+    printf("done.\n");
+
+    return args;
+}
+
+void start_vframe_renderer(struct vframe_renderer_args* args, uint8_t count) {
+    pthread_t threads[count];
+    for (size_t i = 0; i < count; i++) {
+        pthread_create(&threads[i], NULL, &vframe_renderer, (void*) &args[i]);
+    }
+
+    if (!did_start_renderer) {
+        did_start_renderer = 1;
+        return;
+    }
+
+    int8_t joined_threads = 0;
+    int8_t thread_idx = 0;
+    while (joined_threads != count) {
+        if (extra_renderer_back_queue[thread_idx] != -1) {
+            printf("joining thread %d...", extra_renderer_back_queue[thread_idx]);
+            pthread_join(threads[extra_renderer_back_queue[thread_idx]], NULL);
+            joined_threads++;
+            printf("joined thread\n");
+            extra_renderer_back_queue[thread_idx++] = -1;
+        } 
+    }
+    extra_renderer_idx = 0;
+}
+
+void* vframe_renderer(void* args) {
     return NULL;
 }
 
